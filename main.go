@@ -7,71 +7,81 @@ import (
 	"strings"
 )
 
-func main() {
-	/*
-		Commands:
-		 - set x val
-		 - get x
-		 - update x new_val
-		 - delete x
+type Command struct {
+	name    string
+	options []string
+}
 
-		Approach:
-		 - File store - async
-		 - Cache for recent values
-		 - bloom filter
-	*/
+func main() {
 	reader := bufio.NewReader(os.Stdin)
 
 	cache := make(map[string]string)
 
+loop:
 	for {
-		fmt.Print("Enter your input: ")
-		inputCommand, _ := reader.ReadString('\n')
+		command := getUserCommand(reader)
 
-		inputCommand = strings.TrimSpace(inputCommand)
-
-		// Parse command into
-		delimiter := " "
-		commandContent := strings.Split(inputCommand, delimiter)
-
-		if len(commandContent) < 2 {
+		if len(command.options) < 1 {
 			fmt.Println("Invalid command")
+			continue
 		}
 
-		switch commandContent[0] {
+		switch command.name {
 		case "set":
 			// set x val
-			_, exists := cache[commandContent[1]]
-			if exists {
-				fmt.Println("Element already present: ", cache[commandContent[1]])
-				break
+			err := setVal(cache, &command.options[0], &command.options[1])
+
+			if err != nil {
+				fmt.Println(err)
 			}
-			cache[commandContent[1]] = commandContent[2]
-			fmt.Printf("%T\n", commandContent[2])
+
 		case "get":
-			_, exists := cache[commandContent[1]]
+			_, exists := cache[command.options[0]]
 			if exists {
-				fmt.Println("Value: ", cache[commandContent[1]])
+				fmt.Println("Value: ", cache[command.options[0]])
 			} else {
 				fmt.Println("Element not present")
 			}
 		case "delete":
-			_, exists := cache[commandContent[1]]
+			_, exists := cache[command.options[0]]
 			if !exists {
 				fmt.Println("Element not present")
 				break
 			}
-			delete(cache, commandContent[1])
+			delete(cache, command.options[0])
 		case "update":
-			_, exists := cache[commandContent[1]]
+			_, exists := cache[command.options[0]]
 			if !exists {
 				fmt.Println("Element not present")
 				break
 			}
-			cache[commandContent[1]] = commandContent[2]
+			cache[command.options[0]] = command.options[1]
 		case "exit":
-			break
+			break loop
 		}
 	}
 
+}
+
+func setVal(cache map[string]string, key *string, value *string) error {
+	_, exists := cache[*key]
+
+	if exists {
+		return fmt.Errorf("element already present: %s", *key)
+	}
+
+	cache[*key] = *value
+
+	return nil
+}
+
+func getUserCommand(reader *bufio.Reader) Command {
+	fmt.Print("Enter your input: ")
+	inputCommand, _ := reader.ReadString('\n')
+
+	inputCommand = strings.TrimSpace(inputCommand)
+
+	delimiter := " "
+	commandContent := strings.Split(inputCommand, delimiter)
+	return Command{commandContent[0], commandContent[1:]}
 }
